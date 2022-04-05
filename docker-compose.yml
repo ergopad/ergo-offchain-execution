@@ -1,0 +1,85 @@
+version: '3.9'
+
+services:
+  eo-api:
+    container_name: eo-api
+    env_file: .env
+    build:
+      context: .
+      dockerfile: ./ergo_offchain_api/Dockerfile
+    ports: 
+      - ${API_PORT}:${API_PORT}
+    volumes: 
+     - ./:/app
+    networks:
+      - ergo-offchain
+    command: uvicorn ergo_offchain_api.main:app --reload --workers 4 --reload-dir /app/ergo_offchain_api --host 0.0.0.0 --port ${API_PORT} --proxy-headers --use-colors
+  utxo_grabber:
+    container_name: utxo_grabber
+    env_file: .env
+    networks:
+      - ergo-offchain
+    build:
+      context: .
+      dockerfile: ./utxo_grabber/Dockerfile
+    volumes:
+      - ./:/code
+    entrypoint: watchmedo auto-restart --recursive --pattern="*.py" --directory="./utxo_grabber" -- python -m utxo_grabber
+    depends_on:
+      - eo-kafka
+      - eo-redis
+  eo-zookeeper:
+    container_name: eo-zookeeper
+    restart: always
+    networks: 
+      - ergo-offchain
+    image: 'bitnami/zookeeper:latest'
+    ports:
+      - '2181:2181'
+    environment:
+      - ALLOW_ANONYMOUS_LOGIN=yes
+  eo-kafka:
+    container_name: eo-kafka
+    restart: always
+    networks: 
+      - ergo-offchain
+    image: 'bitnami/kafka:latest'
+    ports:
+      - '0.0.0.0:9092:9092'
+    environment:
+      - KAFKA_BROKER_ID=1
+      - KAFKA_CFG_LISTENERS=PLAINTEXT://:9092
+      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://eo-kafka:9092
+      - KAFKA_CFG_ZOOKEEPER_CONNECT=eo-zookeeper:2181
+      - ALLOW_PLAINTEXT_LISTENER=yes
+    depends_on:
+      - eo-zookeeper
+  eo-redis:
+    container_name: eo-redis
+    env_file: .env
+    image: redis
+    volumes: 
+      - redis_vol:/data # redis persistence
+    ports: 
+      - ${REDIS_PORT}:${REDIS_PORT}
+    networks:
+      - ergo-offchain
+    entrypoint: redis-server --appendonly yes --port ${REDIS_PORT}
+  eo-postgres:
+    container_name: eo-postgres
+    env_file: .env
+    image: postgres:14
+    shm_size: 512m
+    restart: always
+    volumes: 
+      - postgres_vol:/var/lib/postgresql/data:cached
+    ports: 
+      - ${POSTGRES_PORT}:${POSTGRES_PORT}
+    networks:
+      - ergo-offchain
+volumes:
+  postgres_vol:
+  redis_vol:
+networks:
+  ergo-offchain:
+    driver: bridge

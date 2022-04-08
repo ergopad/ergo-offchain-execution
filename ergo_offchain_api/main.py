@@ -1,6 +1,10 @@
 from fastapi import FastAPI
 from ergo_offchain_api.routes.filter import filter_router
 import uvicorn
+import logging
+
+levelname = logging.DEBUG
+logging.basicConfig(format='{asctime}:{name:>8s}:{levelname:<8s}::{message}', style='{', level=levelname)
 
 app = FastAPI(
     title="Ergo Off-chain Execution",

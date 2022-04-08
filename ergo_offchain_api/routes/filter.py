@@ -44,4 +44,4 @@ async def deleteFilter(name: str, db: AsyncSession = Depends(get_session)):
     deleted = await crud.delete_filter(db,name)
     if deleted == 0:
         raise HTTPException(status_code=404, detail="Filter not found")
-    return
+    return deleted

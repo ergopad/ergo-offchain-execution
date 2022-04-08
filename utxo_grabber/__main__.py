@@ -24,27 +24,46 @@ if __name__ == "__main__":
     cache: RedisCache = RedisCache(os.getenv("REDIS_HOST"),os.getenv("REDIS_PORT"))
 
     explorerHost: str = os.getenv("ERGO_EXPLORER")
+    ergoNode: str = os.getenv("ERGO_NODE")
 
-    utxo_checkpoint: int = cache.getIntOrElse("utxo_grabber_checkpoint",0)
+    tx_checkpoint: int = cache.getIntOrElse("utxo_grabber_tx_checkpoint",2948924)
 
-    block_checkpoint: int = cache.getIntOrElse("utxo_grabber_block_checkpoint",0)
+    block_checkpoint: int = cache.getIntOrElse("utxo_grabber_block_checkpoint",720000)
 
     limit: int = 500
 
     while True:
-        utxo_result: Response = requests.get(f"{explorerHost}/api/v1/boxes/byGlobalIndex/stream?minGix={utxo_checkpoint}&limit={limit}")
+        mempoolOffset = 0
+        mempoolLimit = 100
+        mempoolScanDone = False
+        mempoolTransactions = []
+        while not mempoolScanDone:
+            mempool_result: Response = requests.get(f"{ergoNode}/transactions/unconfirmed?offset={mempoolOffset}&limit={mempoolLimit}")
+            if mempool_result.ok:
+                mempoolTransactions = mempoolTransactions + list(mempool_result.json())
+            if len(mempool_result.json()) < mempoolLimit:
+                mempoolScanDone = True    
+                
+        for mempoolTx in mempoolTransactions:
+            if cache.getJsonOrElse(mempoolTx["id"],None) is None:
+                cache.set(mempoolTx["id"],1,3600)
+                producer.send('ergo.tx',mempoolTx)
+                for mempoolUtxo in mempoolTx["outputs"]:
+                    producer.send('ergo.utxo',mempoolUtxo)
+            
+        tx_result: Response = requests.get(f"{explorerHost}/api/v1/transactions/byGlobalIndex/stream?minGix={tx_checkpoint}&limit={limit}")
 
-        if utxo_result.ok:
-            boxesFound: int = 0
-            for box in splitfile(BytesIO(utxo_result.content),format="json"):
-                utxo = json.loads(box)
-                if cache.getJsonOrElse(utxo["boxId"],None) is None:
-                    cache.set(utxo["boxId"],box,3600)
+        if tx_result.ok:
+            txFound: int = 0
+            for rawTx in splitfile(BytesIO(tx_result.content),format="json"):
+                tx = json.loads(rawTx)
+                producer.send('ergo.tx',tx)
+                txFound += 1
+                for utxo in tx["outputs"]:
                     producer.send('ergo.utxo',utxo)
-                boxesFound += 1
-            utxo_checkpoint += boxesFound
-            cache.set("utxo_grabber_checkpoint",utxo_checkpoint)
-            logging.info(f"Current UTXO checkpoint: {utxo_checkpoint}")
+            tx_checkpoint += txFound
+            cache.set("utxo_grabber_tx_checkpoint",tx_checkpoint)
+            logging.info(f"Current TX checkpoint: {tx_checkpoint}")
 
         block_result: Response = requests.get(f"{explorerHost}/api/v1/blocks?offset={block_checkpoint}&limit={limit}&sortDirection=asc")
 

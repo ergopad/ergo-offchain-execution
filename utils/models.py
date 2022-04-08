@@ -1,10 +1,13 @@
+from datetime import datetime
 from enum import Enum
 from typing import Any, List, Optional, Union
-from pydantic import BaseModel, ValidationError
+from sqlalchemy import ARRAY, JSON, Column, String
+from sqlmodel import SQLModel, Field
 
 class FilterType(str, Enum):
     UTXO = "utxo"
     BLOCK = "block"
+    TX = "tx"
 
 class FilterNodeType(str, Enum):
     AND = "and"
@@ -17,26 +20,33 @@ class FilterNodeType(str, Enum):
 
 field_validation = {
     FilterType.UTXO: {
-        "R4.renderedValue": Any
+        "R4.renderedValue": Any,
+        "address": str
     },
     FilterType.BLOCK: {
         "timestamp": int
     }
 }
 
-class FilterNode(BaseModel):
+class FilterNode(SQLModel):
     nodeType: FilterNodeType
     fieldName: Optional[str]
     comparisonValue: Optional[Union[int,str]]
     childNodes: Optional[List['FilterNode']]
 
-class Filter(BaseModel):
-    name: str
+class FilterBase(SQLModel):
+    name: str = Field(default=None, primary_key=True, nullable=False)
     filterType: FilterType
     repeats: int
-    topics: List[str]
+    topics: List[str] = Field(default=None, sa_column=Column(ARRAY(String())))
     messageTemplate: str
-    filterTree: FilterNode
+    filterTree: FilterNode = Field(default=None, sa_column=Column(JSON()))
+
+class FilterCreate(FilterBase):
+    pass
+
+class Filter(FilterBase, table=True):
+    pass
 
 class FilterValidationException(Exception):
     def __init__(self, node: FilterNode, message: str, *args: object) -> None:
@@ -59,10 +69,10 @@ def validateFilterNode(filterType: FilterType, node: FilterNode) -> bool:
             raise FilterValidationException(node,"comparisonValue should be set")
         if node.childNodes is not None:
             raise FilterValidationException(node,"childNodes should not be set")
-        if node.fieldName not in field_validation[filterType].keys():
-            raise FilterValidationException(node,f"{node.fieldName} is not a supported filter field")
-        if field_validation[filterType][node.fieldName] is not Any and type(node.comparisonValue) is not field_validation[filterType][node.fieldName]:
-            raise FilterValidationException(node,f"{node.comparisonValue} should be of type {field_validation[filterType][node.fieldName]} but is type {type(node.comparisonValue)}")
+        # if node.fieldName not in field_validation[filterType].keys():
+        #     raise FilterValidationException(node,f"{node.fieldName} is not a supported filter field")
+        # if field_validation[filterType][node.fieldName] is not Any and type(node.comparisonValue) is not field_validation[filterType][node.fieldName]:
+        #     raise FilterValidationException(node,f"{node.comparisonValue} should be of type {field_validation[filterType][node.fieldName]} but is type {type(node.comparisonValue)}")
     valid = True
     if node.childNodes is not None:
         for child in node.childNodes:

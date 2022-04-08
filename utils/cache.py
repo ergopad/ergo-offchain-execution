@@ -2,6 +2,7 @@ import sys
 from redis import Redis
 import json
 import logging
+import pickle
 
 class RedisCache:
     def __init__(self, redisHost: str, redisPort: str, defaultTimeout: int = -1) -> None:
@@ -9,6 +10,9 @@ class RedisCache:
         self.redisPort = redisPort
         self.defaultTimeout = defaultTimeout
         self.client = Redis(self.redisHost,self.redisPort)
+
+    def remove(self, key: str):
+        self.client.delete(key)
 
     def getInt(self, key: str) -> int:
         return int(self.client.get(key))
@@ -29,6 +33,15 @@ class RedisCache:
         except:
             return default
 
+    def getObject(self, key: str):
+        return pickle.loads(self.client.get(key))
+
+    def getObjectOrElse(self, key: str, default):
+        try:
+            return self.getObject(key)
+        except:
+            return default
+
     def getStr(self, key: str) -> str:
         return str(self.client.get(key))
 
@@ -37,6 +50,12 @@ class RedisCache:
             return self.getStr(key)
         except:
             return default
+
+    def setObject(self, key: str, value: object, timeout: int = None):
+        self.set(key,pickle.dumps(value),timeout)
+
+    def setJson(self, key: str, value: json, timeout: int = None):
+        self.set(key,json.dumps(value),timeout)
 
     def set(self, key: str, value, timeout: int = None):
         if timeout is None:

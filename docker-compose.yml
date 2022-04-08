@@ -13,7 +13,10 @@ services:
      - ./:/app
     networks:
       - ergo-offchain
-    command: uvicorn ergo_offchain_api.main:app --reload --workers 4 --reload-dir /app/ergo_offchain_api --host 0.0.0.0 --port ${API_PORT} --proxy-headers --use-colors
+    command: bash -c "alembic upgrade head && uvicorn ergo_offchain_api.main:app --reload --workers 4 --reload-dir /app/ergo_offchain_api --reload-dir /app/utils --host 0.0.0.0 --port ${API_PORT} --proxy-headers --use-colors"
+    depends_on:
+      - eo-redis
+      - eo-postgres
   utxo_grabber:
     container_name: utxo_grabber
     env_file: .env
@@ -24,10 +27,24 @@ services:
       dockerfile: ./utxo_grabber/Dockerfile
     volumes:
       - ./:/code
-    entrypoint: watchmedo auto-restart --recursive --pattern="*.py" --directory="./utxo_grabber" -- python -m utxo_grabber
+    entrypoint: watchmedo auto-restart --recursive --pattern="*.py" --directory="./utxo_grabber" --directory="./utils" -- python -m utxo_grabber
     depends_on:
       - eo-kafka
-      - eo-redis
+      - eo-api
+  filter_validator:
+    container_name: filter_validator
+    env_file: .env
+    networks:
+      - ergo-offchain
+    build:
+      context: .
+      dockerfile: ./filter_validator/Dockerfile
+    volumes:
+      - ./:/code
+    entrypoint: watchmedo auto-restart --recursive --pattern="*.py" --directory="./filter_validator" --directory="./utils" -- python -m filter_validator
+    depends_on:
+      - eo-kafka
+      - eo-api
   eo-zookeeper:
     container_name: eo-zookeeper
     restart: always
@@ -67,14 +84,13 @@ services:
     entrypoint: redis-server --appendonly yes --port ${REDIS_PORT}
   eo-postgres:
     container_name: eo-postgres
+    hostname: postgres
     env_file: .env
     image: postgres:14
     shm_size: 512m
     restart: always
     volumes: 
       - postgres_vol:/var/lib/postgresql/data:cached
-    ports: 
-      - ${POSTGRES_PORT}:${POSTGRES_PORT}
     networks:
       - ergo-offchain
 volumes:

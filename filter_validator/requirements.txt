@@ -1,3 +1,7 @@
+alembic==1.7.7
+asyncpg==0.25.0
+fastapi==0.75.1
 kafka-python==2.0.2
 redis==4.2.2
+sqlmodel==0.0.6
 watchdog==2.1.7

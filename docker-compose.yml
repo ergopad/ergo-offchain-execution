@@ -1,4 +1,4 @@
-version: '3.9'
+version: '3'
 
 services:
   eo-api:
@@ -12,7 +12,7 @@ services:
     volumes: 
      - ./:/app
     networks:
-      - ergo-offchain
+      - net
     command: bash -c "alembic upgrade head && uvicorn ergo_offchain_api.main:app --reload --workers 4 --reload-dir /app/ergo_offchain_api --reload-dir /app/utils --host 0.0.0.0 --port ${API_PORT} --proxy-headers --use-colors"
     depends_on:
       - eo-redis
@@ -21,7 +21,7 @@ services:
     container_name: utxo_grabber
     env_file: .env
     networks:
-      - ergo-offchain
+      - net
     build:
       context: .
       dockerfile: ./utxo_grabber/Dockerfile
@@ -35,7 +35,7 @@ services:
     container_name: filter_validator
     env_file: .env
     networks:
-      - ergo-offchain
+      - net
     build:
       context: .
       dockerfile: ./filter_validator/Dockerfile
@@ -49,7 +49,7 @@ services:
     container_name: eo-zookeeper
     restart: always
     networks: 
-      - ergo-offchain
+      - net
     image: 'bitnami/zookeeper:latest'
     ports:
       - '2181:2181'
@@ -59,7 +59,7 @@ services:
     container_name: eo-kafka
     restart: always
     networks: 
-      - ergo-offchain
+      - net
     image: 'bitnami/kafka:latest'
     ports:
       - '0.0.0.0:9092:9092'
@@ -80,7 +80,7 @@ services:
     ports: 
       - ${REDIS_PORT}:${REDIS_PORT}
     networks:
-      - ergo-offchain
+      - net
     entrypoint: redis-server --appendonly yes --port ${REDIS_PORT}
   eo-postgres:
     container_name: eo-postgres
@@ -92,10 +92,10 @@ services:
     volumes: 
       - postgres_vol:/var/lib/postgresql/data:cached
     networks:
-      - ergo-offchain
+      - net
 volumes:
   postgres_vol:
   redis_vol:
 networks:
-  ergo-offchain:
+  net:
     driver: bridge

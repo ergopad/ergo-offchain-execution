@@ -1,3 +1,6 @@
+import json
+import os
+from kafka import KafkaProducer
 from utils.models import Filter, FilterNode, FilterNodeType
 import re
 import logging
@@ -5,16 +8,22 @@ import logging
 levelname = logging.DEBUG
 logging.basicConfig(format='{asctime}:{name:>8s}:{levelname:<8s}::{message}', style='{', level=levelname)
 
+producer = KafkaProducer(bootstrap_servers=f"{os.getenv('KAFKA_HOST')}:{os.getenv('KAFKA_PORT')}",value_serializer=lambda m: json.dumps(m).encode('utf-8'))
+
 class FilterValidator():
     def __init__(self, filter: Filter) -> None:
         self.filter: Filter = Filter.from_orm(filter)
 
-    def process(self,message):
+    def process(self,message: json):
         self.wildcards = {}
         if self.processNode(self.filter.filterTree,message):
-            logging.info("Found a match")
-            logging.info(self.filter)
-            logging.info(message)
+            logging.debug("Found a match")
+            logging.debug(self.filter)
+            logging.debug(message)
+            messageToSend = re.sub("%.*%",json.dumps(message),self.filter.messageTemplate)
+            logging.debug(f"sending message: {messageToSend}")
+            for topic in self.filter.topics:
+                producer.send(topic,messageToSend)
 
     def processNode(self,node: FilterNode, message) -> bool:
         if node.nodeType is FilterNodeType.AND:

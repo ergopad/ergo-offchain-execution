@@ -3,12 +3,23 @@ import sqlalchemy
 from sqlalchemy.future import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.engine.cursor import CursorResult
-from utils.models import Filter, FilterCreate, FilterType
+from utils.models import Filter, FilterCreate, FilterType, Transaction, TransactionCreate
 from utils.cache import RedisCache
 from utils.database import engine
 import logging
 
 cache: RedisCache = RedisCache(os.getenv("REDIS_HOST"),os.getenv("REDIS_PORT"))
+
+async def get_transaction(db: AsyncSession, transaction_id: str):
+    result = await db.execute(select(Transaction).filter(Transaction.txId == transaction_id).order_by(Transaction.created_dtz.desc()))
+    return result.scalars().first()
+
+async def insert_transaction(db: AsyncSession, transaction: TransactionCreate):
+    db_transaction = Transaction(txId=transaction.txId,reward=transaction.reward,status=transaction.status,txType=transaction.txType)
+    db.add(db_transaction)
+    await db.commit()
+    await db.refresh(db_transaction)
+    return db_transaction
 
 async def get_filter(db: AsyncSession, filter_name: str):
     result = await db.execute(select(Filter).filter(Filter.name == filter_name))

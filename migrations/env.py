@@ -9,7 +9,7 @@ from utils.database import SQLALCHEMY_DATABASE_URL
 
 from alembic import context
 
-from utils.models import Filter
+from utils.models import Filter, Transaction
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

@@ -3,6 +3,7 @@ import json
 import logging
 import os
 import sys
+import time
 from fastapi import Depends
 from kafka import KafkaConsumer
 from filter_validator.FilterValidator import FilterValidator
@@ -21,8 +22,12 @@ logger.addHandler(logging.StreamHandler(sys.stdout))
 logger.setLevel(logging.WARN)
 
 cache: RedisCache = RedisCache(os.getenv("REDIS_HOST"),os.getenv("REDIS_PORT"))
-
-consumer = KafkaConsumer('ergo.utxo','ergo.blocks','ergo.tx',group_id='filter-validators',bootstrap_servers=f"{os.getenv('KAFKA_HOST')}:{os.getenv('KAFKA_PORT')}",value_deserializer=lambda m: json.loads(m.decode('utf-8')))
+consumer = None
+while consumer is None:
+    try:
+        consumer = KafkaConsumer('ergo.utxo','ergo.blocks','ergo.tx',group_id='filter-validators',bootstrap_servers=f"{os.getenv('KAFKA_HOST')}:{os.getenv('KAFKA_PORT')}",value_deserializer=lambda m: json.loads(m.decode('utf-8')))
+    except:
+        time.sleep(2)
 
 async def refreshFilterCache():
     db: AsyncSession = sessionmaker(

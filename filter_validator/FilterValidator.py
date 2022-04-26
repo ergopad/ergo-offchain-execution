@@ -1,5 +1,6 @@
 import json
 import os
+import time
 from kafka import KafkaProducer
 from utils.models import Filter, FilterNode, FilterNodeType
 import re
@@ -8,7 +9,12 @@ import logging
 levelname = logging.DEBUG
 logging.basicConfig(format='{asctime}:{name:>8s}:{levelname:<8s}::{message}', style='{', level=levelname)
 
-producer = KafkaProducer(bootstrap_servers=f"{os.getenv('KAFKA_HOST')}:{os.getenv('KAFKA_PORT')}",value_serializer=lambda m: json.dumps(m).encode('utf-8'))
+producer = None
+while producer is None:
+    try:
+        producer = KafkaProducer(bootstrap_servers=f"{os.getenv('KAFKA_HOST')}:{os.getenv('KAFKA_PORT')}",value_serializer=lambda m: json.dumps(m).encode('utf-8'))
+    except:
+        time.sleep(2)
 
 class FilterValidator():
     def __init__(self, filter: Filter) -> None:
@@ -18,10 +24,9 @@ class FilterValidator():
         self.wildcards = {}
         if self.processNode(self.filter.filterTree,message):
             logging.debug("Found a match")
-            logging.debug(self.filter)
-            logging.debug(message)
-            messageToSend = re.sub("%.*%",json.dumps(message),self.filter.messageTemplate)
-            logging.debug(f"sending message: {messageToSend}")
+            logging.debug(self.filter.name)
+            messageMatch: re.Match = re.search("(%.*%)",self.filter.messageTemplate)
+            messageToSend = json.loads(self.filter.messageTemplate.replace(messageMatch.group(),json.dumps(message)))
             for topic in self.filter.topics:
                 producer.send(topic,messageToSend)
 

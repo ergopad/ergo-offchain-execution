@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from ergo_offchain_api.routes.filter import filter_router
 from ergo_offchain_api.routes.config import config_router
+from ergo_offchain_api.routes.transaction import transaction_router
 import uvicorn
 import logging
 
@@ -15,6 +16,7 @@ app = FastAPI(
 
 app.include_router(config_router, prefix="/api/config", tags=["config"])
 app.include_router(filter_router, prefix="/api/filter", tags=["filter"])
+app.include_router(transaction_router, prefix="/api/transaction", tags=["transaction"])
 
 if __name__ == "__main__":
     uvicorn.run("main:app", host="0.0.0.0", reload=True, port=8000)

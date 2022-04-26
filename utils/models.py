@@ -1,8 +1,10 @@
 from datetime import datetime
 from enum import Enum
 from typing import Any, List, Optional, Union
-from sqlalchemy import ARRAY, JSON, Column, String
-from sqlmodel import SQLModel, Field
+from sqlalchemy import ARRAY, JSON, Column, String, TIMESTAMP
+from sqlalchemy.sql.functions import now
+from sqlalchemy.sql.expression import func
+from sqlmodel import SQLModel, Field, TIMESTAMP
 
 class FilterType(str, Enum):
     UTXO = "utxo"
@@ -78,3 +80,21 @@ def validateFilterNode(filterType: FilterType, node: FilterNode) -> bool:
         for child in node.childNodes:
             valid = valid and validateFilterNode(filterType, child) 
     return valid
+
+class TransactionStatus(str, Enum):
+    SUBMITTED = "submitted"
+    CONFIRMED = "confirmed"
+    FAILED = "failed"
+
+class TransactionBase(SQLModel):
+    txId: str
+    reward: float
+    status: TransactionStatus
+    txType: str = Field(nullable=True)
+
+class TransactionCreate(TransactionBase):
+    pass
+
+class Transaction(TransactionBase, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    created_dtz: Optional[datetime] = Field(default=datetime.utcnow(),sa_column=TIMESTAMP(timezone=True),nullable=False)

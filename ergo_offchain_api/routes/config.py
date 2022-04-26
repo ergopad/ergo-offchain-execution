@@ -12,5 +12,6 @@ async def getConfig():
         'REDIS_HOST': os.getenv('REDIS_HOST'),
         'REDIS_PORT': os.getenv('REDIS_PORT'),
         'KAFKA_HOST': os.getenv('KAFKA_HOST'),
-        'KAFKA_PORT': os.getenv('KAFKA_PORT')
+        'KAFKA_PORT': os.getenv('KAFKA_PORT'),
+        'REWARD_ADDRESS': os.getenv('REWARD_ADDRESS')
     }

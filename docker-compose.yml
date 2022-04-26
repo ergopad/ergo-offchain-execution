@@ -17,6 +17,20 @@ services:
     depends_on:
       - eo-redis
       - eo-postgres
+  tx_submitter:
+    container_name: tx_submitter
+    env_file: .env
+    networks:
+      - net
+    build:
+      context: .
+      dockerfile: ./tx_submitter/Dockerfile
+    volumes:
+      - ./:/code
+    entrypoint: watchmedo auto-restart --recursive --pattern="*.py" --directory="./tx_submitter" --directory="./utils" -- python -m tx_submitter
+    depends_on:
+      - eo-kafka
+      - eo-api
   utxo_grabber:
     container_name: utxo_grabber
     env_file: .env

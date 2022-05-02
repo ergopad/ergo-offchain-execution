@@ -55,15 +55,18 @@ async def main():
     await refreshFilterCache()
 
     for message in consumer:
-        if message.topic == 'ergo.utxo':
-            filters: list[str] = cache.getObject('utxo_filters')          
-        if message.topic == 'ergo.blocks':
-            filters: list[str] = cache.getObject('block_filters')
-        if message.topic == 'ergo.tx':
-            filters: list[str] = cache.getObject('tx_filters')
-        for filter in filters:
-            filterValidator: FilterValidator = FilterValidator(cache.getObject(f'filter_{filter}'))
-            filterValidator.process(message.value)
+        try:
+            if message.topic == 'ergo.utxo':
+                filters: list[str] = cache.getObject('utxo_filters')          
+            if message.topic == 'ergo.blocks':
+                filters: list[str] = cache.getObject('block_filters')
+            if message.topic == 'ergo.tx':
+                filters: list[str] = cache.getObject('tx_filters')
+            for filter in filters:
+                filterValidator: FilterValidator = FilterValidator(cache.getObject(f'filter_{filter}'))
+                filterValidator.process(message.value)
+        except Exception as e:
+            logging.error(e)
 
 if __name__ == "__main__":
     asyncio.run(main())

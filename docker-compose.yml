@@ -66,8 +66,9 @@ services:
       - net
     image: 'bitnami/zookeeper:latest'
     ports:
-      - '2181:2181'
+      - '2182:2182'
     environment:
+      - ZOO_PORT_NUMBER=2182
       - ALLOW_ANONYMOUS_LOGIN=yes
   eo-kafka:
     container_name: eo-kafka
@@ -76,12 +77,12 @@ services:
       - net
     image: 'bitnami/kafka:latest'
     ports:
-      - '0.0.0.0:9092:9092'
+      - '0.0.0.0:9099:9099'
     environment:
       - KAFKA_BROKER_ID=1
-      - KAFKA_CFG_LISTENERS=PLAINTEXT://:9092
-      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://eo-kafka:9092
-      - KAFKA_CFG_ZOOKEEPER_CONNECT=eo-zookeeper:2181
+      - KAFKA_CFG_LISTENERS=PLAINTEXT://:9099
+      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://eo-kafka:9099
+      - KAFKA_CFG_ZOOKEEPER_CONNECT=eo-zookeeper:2182
       - ALLOW_PLAINTEXT_LISTENER=yes
     depends_on:
       - eo-zookeeper

@@ -52,6 +52,7 @@ async def main():
                 await db.close()
                 logging.info(f"Submitted tx: {tx['id']}")
             else:
+                logging.error(tx)
                 logging.error(res.content)
         except Exception as e:
             logging.error(e)

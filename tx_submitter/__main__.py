@@ -51,6 +51,8 @@ async def main():
                 await crud.insert_transaction(db,db_tx)
                 await db.close()
                 logging.info(f"Submitted tx: {tx['id']}")
+            else:
+                logging.error(res.content)
         except Exception as e:
             logging.error(e)
 

@@ -31,9 +31,9 @@ if __name__ == "__main__":
     explorerHost: str = os.getenv("ERGO_EXPLORER")
     ergoNode: str = os.getenv("ERGO_NODE")
 
-    tx_checkpoint: int = cache.getIntOrElse("utxo_grabber_tx_checkpoint",3110000)
+    tx_checkpoint: int = cache.getIntOrElse("utxo_grabber_tx_checkpoint",3190000)
 
-    block_checkpoint: int = cache.getIntOrElse("utxo_grabber_block_checkpoint",741000)
+    block_checkpoint: int = cache.getIntOrElse("utxo_grabber_block_checkpoint",750000)
 
     limit: int = 500
 

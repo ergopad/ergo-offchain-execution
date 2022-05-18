@@ -1,6 +1,7 @@
 version: '3'
 
 services:
+
   eo-api:
     container_name: eo-api
     env_file: .env
@@ -17,6 +18,7 @@ services:
     depends_on:
       - eo-redis
       - eo-postgres
+
   tx_submitter:
     container_name: tx_submitter
     env_file: .env
@@ -31,6 +33,7 @@ services:
     depends_on:
       - eo-kafka
       - eo-api
+
   utxo_grabber:
     container_name: utxo_grabber
     env_file: .env
@@ -45,6 +48,7 @@ services:
     depends_on:
       - eo-kafka
       - eo-api
+
   filter_validator:
     container_name: filter_validator
     env_file: .env
@@ -59,6 +63,7 @@ services:
     depends_on:
       - eo-kafka
       - eo-api
+
   eo-zookeeper:
     container_name: eo-zookeeper
     restart: always
@@ -70,6 +75,7 @@ services:
     environment:
       - ZOO_PORT_NUMBER=2182
       - ALLOW_ANONYMOUS_LOGIN=yes
+
   eo-kafka:
     container_name: eo-kafka
     restart: always
@@ -86,17 +92,19 @@ services:
       - ALLOW_PLAINTEXT_LISTENER=yes
     depends_on:
       - eo-zookeeper
+
   eo-redis:
     container_name: eo-redis
     env_file: .env
     image: redis
     volumes: 
-      - redis_vol:/data # redis persistence
+      - eo-redis_vol:/data # redis persistence
     ports: 
       - ${REDIS_PORT}:${REDIS_PORT}
     networks:
       - net
     entrypoint: redis-server --appendonly yes --port ${REDIS_PORT}
+
   eo-postgres:
     container_name: eo-postgres
     hostname: postgres
@@ -105,12 +113,14 @@ services:
     shm_size: 512m
     restart: always
     volumes: 
-      - postgres_vol:/var/lib/postgresql/data:cached
+      - eo-postgres_vol:/var/lib/postgresql/data:cached
     networks:
       - net
+
 volumes:
-  postgres_vol:
-  redis_vol:
+  eo-postgres_vol:
+  eo-redis_vol:
+
 networks:
   net:
     driver: bridge

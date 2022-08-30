@@ -31,14 +31,21 @@ if __name__ == "__main__":
     explorerHost: str = os.getenv("ERGO_EXPLORER")
     ergoNode: str = os.getenv("ERGO_NODE")
 
-    tx_checkpoint: int = cache.getIntOrElse("utxo_grabber_tx_checkpoint",3190000)
+    tx_checkpoint: int = cache.getIntOrElse("utxo_grabber_tx_checkpoint",0)
 
-    block_checkpoint: int = cache.getIntOrElse("utxo_grabber_block_checkpoint",750000)
+    block_checkpoint: int = cache.getIntOrElse("utxo_grabber_block_checkpoint",0)
+
+    if tx_checkpoint == 0 or block_checkpoint == 0:
+        networkState_response: Response = requests.get(f"{explorerHost}/api/v1/networkState")
+        if networkState_response.ok:
+            tx_checkpoint = networkState_response.json()["maxTxGix"]
+            block_checkpoint = networkState_response.json()["height"]
 
     limit: int = 500
 
     while True:
         try:
+            sleeptime = 5
             mempoolOffset = 0
             mempoolLimit = 100
             mempoolScanDone = False
@@ -69,6 +76,8 @@ if __name__ == "__main__":
                     for utxo in tx["outputs"]:
                         producer.send('ergo.utxo',utxo)
                 tx_checkpoint += txFound
+                if txFound == limit:
+                    sleeptime = 0.1
                 cache.set("utxo_grabber_tx_checkpoint",tx_checkpoint)
                 logging.info(f"Current TX checkpoint: {tx_checkpoint}")
 
@@ -80,8 +89,10 @@ if __name__ == "__main__":
                     producer.send('ergo.blocks',block)
                     blocksFound += 1
                 block_checkpoint += blocksFound
+                if blocksFound == limit:
+                    sleeptime = 0.1
                 cache.set("utxo_grabber_block_checkpoint",block_checkpoint)
                 logging.info(f"Current block checkpoint: {block_checkpoint}")
         except Exception as e:
             logging.error(e)
-        time.sleep(5)
+        time.sleep(sleeptime)

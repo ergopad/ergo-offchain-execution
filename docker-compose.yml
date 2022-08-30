@@ -5,6 +5,7 @@ services:
   eo-api:
     container_name: eo-api
     env_file: .env
+    restart: unless-stopped
     build:
       context: .
       dockerfile: ./ergo_offchain_api/Dockerfile
@@ -22,6 +23,7 @@ services:
   tx_submitter:
     container_name: tx_submitter
     env_file: .env
+    restart: unless-stopped
     networks:
       - net
     build:
@@ -37,6 +39,7 @@ services:
   utxo_grabber:
     container_name: utxo_grabber
     env_file: .env
+    restart: unless-stopped
     networks:
       - net
     build:
@@ -52,6 +55,7 @@ services:
   filter_validator:
     container_name: filter_validator
     env_file: .env
+    restart: unless-stopped
     networks:
       - net
     build:
@@ -66,7 +70,7 @@ services:
 
   eo-zookeeper:
     container_name: eo-zookeeper
-    restart: always
+    restart: unless-stopped
     networks: 
       - net
     image: 'bitnami/zookeeper:latest'
@@ -78,7 +82,7 @@ services:
 
   eo-kafka:
     container_name: eo-kafka
-    restart: always
+    restart: unless-stopped
     networks: 
       - net
     image: 'bitnami/kafka:latest'
@@ -97,6 +101,7 @@ services:
     container_name: eo-redis
     env_file: .env
     image: redis
+    restart: unless-stopped
     volumes: 
       - eo-redis_vol:/data # redis persistence
     ports: 
@@ -111,7 +116,7 @@ services:
     env_file: .env
     image: postgres:14
     shm_size: 512m
-    restart: always
+    restart: unless-stopped
     volumes: 
       - eo-postgres_vol:/var/lib/postgresql/data:cached
     networks:

@@ -36,10 +36,14 @@ if __name__ == "__main__":
     block_checkpoint: int = cache.getIntOrElse("utxo_grabber_block_checkpoint",0)
 
     if tx_checkpoint == 0 or block_checkpoint == 0:
-        networkState_response: Response = requests.get(f"{explorerHost}/api/v1/networkState")
+        networkState_response: Response = requests.get(f"{ergoNode}/info")
         if networkState_response.ok:
-            tx_checkpoint = networkState_response.json()["maxTxGix"]
-            block_checkpoint = networkState_response.json()["height"]
+            block_checkpoint = networkState_response.json()["fullHeight"]
+            block_transactions_response = requests.get(f"{ergoNode}/blocks/{networkState_response.json()['bestFullHeaderId']}")
+            if block_transactions_response.ok:
+                tx_info_response = requests.get(f"{ergoNode}/blockchain/transaction/byId/{block_transactions_response.json()['transactions'][0]['id']}")
+                if tx_info_response.ok:
+                    tx_checkpoint = tx_info_response.json()["globalIndex"]
 
     limit: int = 500
 

@@ -39,7 +39,7 @@ if __name__ == "__main__":
         networkState_response: Response = requests.get(f"{ergoNode}/info")
         if networkState_response.ok:
             block_checkpoint = networkState_response.json()["fullHeight"]
-            block_transactions_response = requests.get(f"{ergoNode}/blocks/{networkState_response.json()['bestFullHeaderId']}")
+            block_transactions_response = requests.get(f"{ergoNode}/blocks/{networkState_response.json()['bestFullHeaderId']}/transactions")
             if block_transactions_response.ok:
                 tx_info_response = requests.get(f"{ergoNode}/blockchain/transaction/byId/{block_transactions_response.json()['transactions'][0]['id']}")
                 if tx_info_response.ok:

@@ -64,28 +64,27 @@ if __name__ == "__main__":
                     producer.send('ergo.tx',mempoolTx)
                     for mempoolUtxo in mempoolTx["outputs"]:
                         producer.send('ergo.utxo',mempoolUtxo)
-                
-            tx_result: Response = requests.get(f"{explorerHost}/api/v1/transactions/byGlobalIndex/stream?minGix={tx_checkpoint}&limit={limit}")
 
-            if tx_result.ok:
-                txFound: int = 0
-                for rawTx in splitfile(BytesIO(tx_result.content),format="json"):
-                    tx = json.loads(rawTx)
+            findingMoreTransactions = True
+            while findingMoreTransactions:
+                tx_result: Response = requests.get(f"{ergoNode}/blockchain/transaction/byIndex/{tx_checkpoint}")
+
+                if tx_result.ok:
+                    tx = tx_result.json()
                     producer.send('ergo.tx',tx)
-                    txFound += 1
                     for utxo in tx["outputs"]:
                         producer.send('ergo.utxo',utxo)
-                tx_checkpoint += txFound
-                if txFound == limit:
-                    sleeptime = 0.1
-                cache.set("utxo_grabber_tx_checkpoint",tx_checkpoint)
-                logging.info(f"Current TX checkpoint: {tx_checkpoint}")
+                    tx_checkpoint += 1
+                    cache.set("utxo_grabber_tx_checkpoint",tx_checkpoint)
+                    logging.info(f"Current TX checkpoint: {tx_checkpoint}")
+                else:
+                    findingMoreTransactions = False
 
-            block_result: Response = requests.get(f"{explorerHost}/api/v1/blocks?offset={block_checkpoint}&limit={limit}&sortDirection=asc")
+            block_result: Response = requests.get(f"{ergoNode}/blocks/chainSlice?fromHeight={block_checkpoint}&toHeight={block_checkpoint+limit}&sortDirection=asc")
 
             if block_result.ok:
                 blocksFound: int = 0
-                for block in block_result.json()["items"]:
+                for block in block_result.json():
                     producer.send('ergo.blocks',block)
                     blocksFound += 1
                 block_checkpoint += blocksFound

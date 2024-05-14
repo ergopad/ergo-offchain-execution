@@ -89,8 +89,9 @@ if __name__ == "__main__":
             if block_result.ok:
                 blocksFound: int = 0
                 for block in block_result.json():
-                    producer.send('ergo.blocks',block)
-                    blocksFound += 1
+                    if block["height"] > block_checkpoint:
+                        producer.send('ergo.blocks',block)
+                        blocksFound += 1
                 block_checkpoint += blocksFound
                 if blocksFound == limit:
                     sleeptime = 0.1
